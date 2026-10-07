@@ -11,5 +11,6 @@ wheels/
 /activate
 
 # Project
+/.claude/settings.local.json
 *.sublime-workspace
 /db.sqlite3
