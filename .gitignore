@@ -12,3 +12,4 @@ wheels/
 
 # Project
 *.sublime-workspace
+/db.sqlite3

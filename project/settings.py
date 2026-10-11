@@ -37,6 +37,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'accounts',
 ]
 
 MIDDLEWARE = [
@@ -78,6 +79,12 @@ DATABASES = {
         'NAME': BASE_DIR / 'db.sqlite3',
     }
 }
+
+
+# Custom user model
+# https://docs.djangoproject.com/en/6.1/topics/auth/customizing/#substituting-a-custom-user-model
+
+AUTH_USER_MODEL = 'accounts.User'
 
 
 # Password validation
