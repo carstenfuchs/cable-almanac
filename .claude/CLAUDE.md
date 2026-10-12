@@ -19,7 +19,13 @@ step by step.
   `uv run manage.py …`).
 - Everything in the repository is English: code, comments, docs and commit
   messages, in American spelling ("modeling").
+- Strings in double quotes for user-facing text (labels, messages), in
+  single quotes for everything technical (field names, choice values,
+  keys). Docstrings use triple double quotes.
 - Keep dependencies minimal; ask before adding new ones.
+- Tests use Django's test framework (`uv run manage.py test`), one module
+  per subject in the app's `tests/` package, named after category and subject,
+  e.g. `inventory/tests/test_model_Component.py`.
 
 ## Guidelines
 
