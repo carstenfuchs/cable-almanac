@@ -1,7 +1,15 @@
 from django.core.exceptions import ValidationError
 from django.test import TestCase
 
-from inventory.models import Building, Component, DeviceKind, DistributorKind, OutletKind, Room, Site
+from inventory.models import (
+    Building,
+    Component,
+    DeviceKind,
+    DistributorKind,
+    OutletKind,
+    Room,
+    Site,
+)
 
 
 class Test_Component(TestCase):

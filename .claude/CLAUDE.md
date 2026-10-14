@@ -22,6 +22,9 @@ step by step.
 - Strings in double quotes for user-facing text (labels, messages), in
   single quotes for everything technical (field names, choice values,
   keys). Docstrings use triple double quotes.
+- `uv run ruff check` must pass. New code is formatted the way `ruff format`
+  would format it, but existing code isn't reformatted. Comments, docstrings
+  and long strings, which `ruff format` doesn't wrap, are wrapped by hand.
 - Keep dependencies minimal; ask before adding new ones.
 - Tests use Django's test framework (`uv run manage.py test`), one module
   per subject in the app's `tests/` package, named after category and subject,

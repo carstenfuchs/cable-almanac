@@ -7,3 +7,43 @@ requires-python = ">=3.14"
 dependencies = [
     "django==6.1.*",
 ]
+
+[dependency-groups]
+dev = [
+    "ruff>=0.17.0",
+]
+
+[tool.ruff]
+# Up through Django 3.2, Django allowed lines up to 119 characters long,
+# but starting with Django 4.0, the limit is 88 characters:
+# https://docs.djangoproject.com/en/dev/internals/contributing/writing-code/coding-style/
+# We use 96 as a compromise, as 88 is often too short.
+#
+# This setting is used not only by `ruff format` (as expected), but also by
+# `ruff check`, which rewraps `from x import y` lines that are too long.
+line-length = 96
+
+[tool.ruff.format]
+# Keep the migrations as Django generates them.
+exclude = ["*/migrations/*"]
+quote-style = "preserve"
+
+[tool.ruff.lint]
+# For "popular rules (without being too pedantic)", see
+# https://docs.astral.sh/ruff/linter/#rule-selection
+select = [
+    "E",    # pycodestyle
+    "F",    # pyflakes
+    "UP",   # pyupgrade
+    "S",    # flake8-bandit
+    "B",    # flake8-bugbear
+    "DJ",   # flake8-django
+    "I",    # isort
+]
+
+ignore = [
+    "E501",     # Line too long
+]
+
+[tool.ruff.lint.isort]
+lines-after-imports = 2
