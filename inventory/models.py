@@ -16,7 +16,6 @@ class Site(models.Model):
 
 
 class Building(models.Model):
-
     site = models.ForeignKey(Site, on_delete=models.CASCADE)
     slug = models.SlugField(allow_unicode=True)
     name = models.CharField(blank=True)
@@ -38,7 +37,6 @@ class Building(models.Model):
 
 
 class Room(models.Model):
-
     building = models.ForeignKey(Building, on_delete=models.CASCADE)
     slug = models.SlugField(allow_unicode=True)
     name = models.CharField(blank=True)
@@ -136,7 +134,8 @@ class Component(models.Model):
                 fields=['parent_room', 'slug'], name='unique_component_slug_per_room'
             ),
             models.UniqueConstraint(
-                fields=['parent_distributor', 'slug'], name='unique_component_slug_per_distributor'
+                fields=['parent_distributor', 'slug'],
+                name='unique_component_slug_per_distributor',
             ),
         ]
 
@@ -172,6 +171,4 @@ class Component(models.Model):
         # contents. (`self.pk` must be checked because Django refuses to access
         # `component_set` for unsaved objects, but these have no contents anyway.)
         if not self.is_distributor and self.pk and self.component_set.exists():
-            raise ValidationError(
-                {'kind': "Only distributors can contain components."}
-            )
+            raise ValidationError({'kind': "Only distributors can contain components."})

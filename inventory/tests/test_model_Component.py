@@ -22,7 +22,9 @@ class Test_Component(TestCase):
         site = Site.objects.create(name='Example')
         building = Building.objects.create(site=site, slug='HouseA')
         cls.room = Room.objects.create(building=building, slug='Basement')
-        cls.board = Component.objects.create(parent_room=cls.room, kind=DistributorKind.SUB_BOARD, slug='SubBoard')
+        cls.board = Component.objects.create(
+            parent_room=cls.room, kind=DistributorKind.SUB_BOARD, slug='SubBoard'
+        )
         cls.actuator = Component.objects.create(
             parent_distributor=cls.board, kind=DeviceKind.KNX_ACTUATOR, slug='Actuator1'
         )
@@ -39,29 +41,46 @@ class Test_Component(TestCase):
 
     def test_slug_unique_per_room(self):
         """Slugs are unique within a room across all kinds."""
-        self.assertInvalid(Component(parent_room=self.room, kind=DeviceKind.LIGHT, slug='SubBoard'), '__all__')
+        self.assertInvalid(
+            Component(parent_room=self.room, kind=DeviceKind.LIGHT, slug='SubBoard'), '__all__'
+        )
 
     def test_slug_unique_per_distributor(self):
         """Slugs are unique within a distributor, independent of those in its room."""
-        duplicate = Component(parent_distributor=self.board, kind=DeviceKind.LIGHT, slug='Actuator1')
+        duplicate = Component(
+            parent_distributor=self.board, kind=DeviceKind.LIGHT, slug='Actuator1'
+        )
         self.assertInvalid(duplicate, '__all__')
-        Component(parent_distributor=self.board, kind=DeviceKind.LIGHT, slug='SubBoard').full_clean()
+        Component(
+            parent_distributor=self.board, kind=DeviceKind.LIGHT, slug='SubBoard'
+        ).full_clean()
 
     def test_slug_without_dots(self):
         """Dots in slugs would make qualified ids ambiguous."""
-        self.assertInvalid(Component(parent_room=self.room, kind=OutletKind.POWER, slug='Outlet.1'), 'slug')
+        self.assertInvalid(
+            Component(parent_room=self.room, kind=OutletKind.POWER, slug='Outlet.1'), 'slug'
+        )
 
     def test_container(self):
         """A component is either in a room or in a distributor."""
         self.assertInvalid(Component(kind=DeviceKind.LIGHT, slug='Light1'), '__all__')
-        both = Component(parent_room=self.room, parent_distributor=self.board, kind=DeviceKind.LIGHT, slug='Light1')
+        both = Component(
+            parent_room=self.room,
+            parent_distributor=self.board,
+            kind=DeviceKind.LIGHT,
+            slug='Light1',
+        )
         self.assertInvalid(both, '__all__')
 
     def test_distributor_contents(self):
         """Distributors contain components, but no distributors; other components contain nothing."""
-        box = Component(parent_distributor=self.board, kind=DistributorKind.JUNCTION_BOX, slug='Box1')
+        box = Component(
+            parent_distributor=self.board, kind=DistributorKind.JUNCTION_BOX, slug='Box1'
+        )
         self.assertInvalid(box, 'parent_distributor')
-        light = Component(parent_distributor=self.actuator, kind=DeviceKind.LIGHT, slug='Light1')
+        light = Component(
+            parent_distributor=self.actuator, kind=DeviceKind.LIGHT, slug='Light1'
+        )
         self.assertInvalid(light, 'parent_distributor')
         self.board.kind = DeviceKind.ROUTER
         self.assertInvalid(self.board, 'kind')
