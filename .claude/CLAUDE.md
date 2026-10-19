@@ -43,6 +43,9 @@ step by step.
 - Views are function-based; class-based views only for trivial CRUD views.
 - Comments, docstrings and commit messages explain what the code or diff
   doesn't: the why, rejected alternatives, pitfalls.
+- They mention the prototype only where it matters to a reader who never knew
+  it, e.g. in the importer of its YAML files, but not to justify code that
+  stands on its own.
 
 ## Workflow
 

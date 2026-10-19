@@ -1,6 +1,14 @@
+from django.core import validators
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models import Q
+
+
+# Code fields must reject dots, as we use dots to separate the levels of qualified ids.
+validate_code = validators.RegexValidator(
+    validators.slug_unicode_re,
+    "Enter a valid code consisting of letters, numbers, underscores or hyphens.",
+)
 
 
 class Site(models.Model):
@@ -17,7 +25,7 @@ class Site(models.Model):
 
 class Building(models.Model):
     site = models.ForeignKey(Site, on_delete=models.CASCADE)
-    code = models.SlugField(allow_unicode=True)
+    code = models.CharField(max_length=40, validators=[validate_code])
     name = models.CharField(blank=True)
     note = models.TextField(blank=True)
 
@@ -38,7 +46,7 @@ class Building(models.Model):
 
 class Room(models.Model):
     building = models.ForeignKey(Building, on_delete=models.CASCADE)
-    code = models.SlugField(allow_unicode=True)
+    code = models.CharField(max_length=40, validators=[validate_code])
     name = models.CharField(blank=True)
     note = models.TextField(blank=True)
     floor = models.CharField(blank=True)
@@ -113,7 +121,7 @@ class Component(models.Model):
     kind = models.CharField(
         choices={"Distributor": DistributorKind, "Outlet": OutletKind, "Device": DeviceKind}
     )
-    code = models.SlugField(allow_unicode=True)
+    code = models.CharField(max_length=40, validators=[validate_code])
     name = models.CharField(blank=True)
     note = models.TextField(blank=True)
 

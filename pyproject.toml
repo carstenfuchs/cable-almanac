@@ -23,9 +23,12 @@ dev = [
 # `ruff check`, which rewraps `from x import y` lines that are too long.
 line-length = 96
 
+# Keep the migrations as Django generates them. Besides `ruff format`, this
+# affects `ruff check`, whose isort rule would otherwise flag the order of
+# their imports, e.g. `import re` after `import django.core.validators`.
+extend-exclude = ["*/migrations/*"]
+
 [tool.ruff.format]
-# Keep the migrations as Django generates them.
-exclude = ["*/migrations/*"]
 quote-style = "preserve"
 
 [tool.ruff.lint]

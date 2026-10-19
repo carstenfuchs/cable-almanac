@@ -61,6 +61,10 @@ class Test_Component(TestCase):
             Component(parent_room=self.room, kind=OutletKind.POWER, code='Outlet.1'), 'code'
         )
 
+    def test_code_with_umlauts(self):
+        """Codes may contain non-ASCII letters."""
+        Component(parent_room=self.room, kind=DeviceKind.LIGHT, code='Außenlicht').full_clean()
+
     def test_container(self):
         """A component is either in a room or in a distributor."""
         self.assertInvalid(Component(kind=DeviceKind.LIGHT, code='Light1'), '__all__')
