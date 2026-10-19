@@ -109,10 +109,10 @@ class Component(models.Model):
         blank=True,
         limit_choices_to={'kind__in': DistributorKind.values},
     )
+
     kind = models.CharField(
         choices={"Distributor": DistributorKind, "Outlet": OutletKind, "Device": DeviceKind}
     )
-
     slug = models.SlugField(allow_unicode=True)
     name = models.CharField(blank=True)
     note = models.TextField(blank=True)
@@ -172,3 +172,110 @@ class Component(models.Model):
         # `component_set` for unsaved objects, but these have no contents anyway.)
         if not self.is_distributor and self.pk and self.component_set.exists():
             raise ValidationError({'kind': "Only distributors can contain components."})
+
+
+class PathwayKind(models.TextChoices):
+    CONDUIT = 'conduit', "Conduit"
+    CABLE_TRAY = 'cable_tray', "Cable tray"
+    CABLE_ROUTE = 'cable_route', "Cable route"
+    PENETRATION = 'penetration', "Wall penetration"
+    SHAFT = 'shaft', "Shaft"
+
+
+class Pathway(models.Model):
+    """
+    A conduit, cable tray, wall penetration etc. between two rooms.
+
+    Pathways exist independently of the cables in them, as an empty conduit is
+    worth documenting as well: it is where new cables can be pulled through.
+    """
+
+    from_room = models.ForeignKey(Room, on_delete=models.CASCADE, related_name='pathways_from')
+    to_room = models.ForeignKey(Room, on_delete=models.CASCADE, related_name='pathways_to')
+
+    kind = models.CharField(choices=PathwayKind)
+    name = models.CharField()
+    note = models.TextField(blank=True)
+
+    diameter = models.PositiveSmallIntegerField(
+        null=True, blank=True, help_text="In millimeters."
+    )
+
+    def __str__(self):
+        return self.name
+
+
+class CableKind(models.TextChoices):
+    POWER = 'power', "Power"
+    EXTRA_LOW_VOLTAGE = 'extra_low_voltage', "Extra-low voltage"
+    TELEPHONE = 'telephone', "Telephone"
+    DSL = 'dsl', "DSL"
+    FIBER = 'fiber', "Fiber optic"
+    CAT5E = 'cat5e', "Cat 5e"
+    CAT6 = 'cat6', "Cat 6"
+    CAT7 = 'cat7', "Cat 7"
+    WIFI = 'wifi', "Wi-Fi"
+    DECT = 'dect', "DECT"
+    KNX = 'knx', "KNX"
+    SIGNAL = 'signal', "Signal"
+
+
+class Cable(models.Model):
+    """
+    A connection between two components, usually one physical cable.
+
+    Radio links (Wi-Fi, DECT) are recorded as cables as well. The direction
+    from `source` to `target` carries no physical meaning. A `name` is only
+    needed if the cable is labeled, e.g. with a cable marker.
+
+    If several cables share one physical sheath, e.g. KNX and telephone lines
+    in one telephone cable, each of them names the sheath in `bundle` and the
+    conductors it uses in `conductors`. `conductor_use` describes how these
+    conductors are wired.
+
+    Nothing keeps a cable from linking the components of two different sites,
+    nor a pathway from linking the rooms of two sites. The import never
+    creates such links, but the admin doesn't prevent them.
+    """
+
+    source = models.ForeignKey(Component, on_delete=models.CASCADE, related_name='cables_from')
+    source_terminal = models.CharField(blank=True)
+    target = models.ForeignKey(Component, on_delete=models.CASCADE, related_name='cables_to')
+    target_terminal = models.CharField(blank=True)
+
+    kind = models.CharField(choices=CableKind)
+    name = models.CharField(blank=True)
+    note = models.TextField(blank=True)
+
+    pathways = models.ManyToManyField(Pathway, through='PathSegment', related_name='cables')
+    cross_section = models.CharField(blank=True)
+    length = models.FloatField(null=True, blank=True, help_text="In meters.")
+    bundle = models.CharField(blank=True)
+    conductors = models.CharField(blank=True)
+    conductor_use = models.TextField(blank=True)
+    installed = models.DateField(null=True, blank=True)
+
+    def __str__(self):
+        return self.name or f"{self.source} → {self.target}"
+
+
+class PathSegment(models.Model):
+    """
+    The section of a cable that runs through a pathway.
+
+    The order of the path segments mostly follows from the rooms that the
+    pathways connect. If an explicit ordering is needed after all, this through
+    model is the right place for a `position` field.
+    """
+
+    cable = models.ForeignKey(Cable, on_delete=models.CASCADE)
+    pathway = models.ForeignKey(Pathway, on_delete=models.CASCADE)
+
+    class Meta:
+        constraints = [
+            # Like the table that Django creates for an implicit through model.
+            models.UniqueConstraint(fields=['cable', 'pathway'], name='unique_path_segment'),
+        ]
+
+    def __str__(self):
+        return f"{self.cable} via {self.pathway}"

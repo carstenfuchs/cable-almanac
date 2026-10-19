@@ -19,6 +19,8 @@ step by step.
   `uv run manage.py …`).
 - Everything in the repository is English: code, comments, docs and commit
   messages, in American spelling ("modeling").
+- Field names name the quantity, not its unit, which goes into the
+  `help_text`: `length` with `help_text="In meters."`, not `length_m`.
 - Strings in double quotes for user-facing text (labels, messages), in
   single quotes for everything technical (field names, choice values,
   keys). Docstrings use triple double quotes.
