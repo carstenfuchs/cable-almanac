@@ -8,9 +8,9 @@ admin.site.register(Site)
 
 @admin.register(Building)
 class BuildingAdmin(admin.ModelAdmin):
-    list_display = ('slug', 'name', 'site')
+    list_display = ('code', 'name', 'site')
     list_filter = ('site',)
-    search_fields = ('slug', 'name')
+    search_fields = ('code', 'name')
 
 
 @admin.register(Room)
@@ -18,8 +18,8 @@ class RoomAdmin(admin.ModelAdmin):
     list_display = ('qualified_id', 'name', 'floor')
     list_filter = ('building',)
     list_select_related = ('building',)
-    search_fields = ('slug', 'name')
-    ordering = ('building__slug', 'slug')
+    search_fields = ('code', 'name')
+    ordering = ('building__code', 'code')
 
 
 @admin.register(Component)
@@ -28,7 +28,7 @@ class ComponentAdmin(admin.ModelAdmin):
     list_filter = ('kind',)
     # For the qualified id.
     list_select_related = ('parent_room__building', 'parent_distributor__parent_room__building')
-    search_fields = ('slug', 'name')
+    search_fields = ('code', 'name')
     autocomplete_fields = ('parent_room', 'parent_distributor')
     # Without an ordering, the autocomplete for `parent_distributor` paginates
     # an unordered queryset and Django warns about it.
@@ -62,6 +62,6 @@ class CableAdmin(admin.ModelAdmin):
         'target__parent_room__building',
         'target__parent_distributor__parent_room__building',
     )
-    search_fields = ('name', 'source__slug', 'target__slug')
+    search_fields = ('name', 'source__code', 'target__code')
     autocomplete_fields = ('source', 'target')
     inlines = (PathSegmentInline,)

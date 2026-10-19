@@ -17,14 +17,14 @@ class Site(models.Model):
 
 class Building(models.Model):
     site = models.ForeignKey(Site, on_delete=models.CASCADE)
-    slug = models.SlugField(allow_unicode=True)
+    code = models.SlugField(allow_unicode=True)
     name = models.CharField(blank=True)
     note = models.TextField(blank=True)
 
     class Meta:
         constraints = [
             models.UniqueConstraint(
-                fields=['site', 'slug'], name='unique_building_slug_per_site'
+                fields=['site', 'code'], name='unique_building_code_per_site'
             ),
         ]
 
@@ -33,12 +33,12 @@ class Building(models.Model):
 
     @property
     def qualified_id(self):
-        return self.slug
+        return self.code
 
 
 class Room(models.Model):
     building = models.ForeignKey(Building, on_delete=models.CASCADE)
-    slug = models.SlugField(allow_unicode=True)
+    code = models.SlugField(allow_unicode=True)
     name = models.CharField(blank=True)
     note = models.TextField(blank=True)
     floor = models.CharField(blank=True)
@@ -46,7 +46,7 @@ class Room(models.Model):
     class Meta:
         constraints = [
             models.UniqueConstraint(
-                fields=['building', 'slug'], name='unique_room_slug_per_building'
+                fields=['building', 'code'], name='unique_room_code_per_building'
             ),
         ]
 
@@ -55,7 +55,7 @@ class Room(models.Model):
 
     @property
     def qualified_id(self):
-        return f'{self.building.qualified_id}.{self.slug}'
+        return f'{self.building.qualified_id}.{self.code}'
 
 
 class DistributorKind(models.TextChoices):
@@ -89,7 +89,7 @@ class Component(models.Model):
     A distributor, outlet or device: anything a cable can end at.
 
     The three share one model because they share their fields and their role:
-    a cable end is a single foreign key to a component, and the slugs within a
+    a cable end is a single foreign key to a component, and the codes within a
     room are unique across all of them.
 
     A component can be either directly in a room or in a distributor, never at
@@ -113,7 +113,7 @@ class Component(models.Model):
     kind = models.CharField(
         choices={"Distributor": DistributorKind, "Outlet": OutletKind, "Device": DeviceKind}
     )
-    slug = models.SlugField(allow_unicode=True)
+    code = models.SlugField(allow_unicode=True)
     name = models.CharField(blank=True)
     note = models.TextField(blank=True)
 
@@ -131,11 +131,11 @@ class Component(models.Model):
             # As NULLs never compare equal, each constraint only applies to the
             # components in that kind of container.
             models.UniqueConstraint(
-                fields=['parent_room', 'slug'], name='unique_component_slug_per_room'
+                fields=['parent_room', 'code'], name='unique_component_code_per_room'
             ),
             models.UniqueConstraint(
-                fields=['parent_distributor', 'slug'],
-                name='unique_component_slug_per_distributor',
+                fields=['parent_distributor', 'code'],
+                name='unique_component_code_per_distributor',
             ),
         ]
 
@@ -152,7 +152,7 @@ class Component(models.Model):
         The qualified id, e.g. `HouseA.Basement.SubBoard.Actuator1`.
         Triggers an extra query per level unless the containers are `select_related()`.
         """
-        return f'{(self.parent_room or self.parent_distributor).qualified_id}.{self.slug}'
+        return f'{(self.parent_room or self.parent_distributor).qualified_id}.{self.code}'
 
     def clean(self):
         # Together with `limit_choices_to`, the two checks below keep the
