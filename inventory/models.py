@@ -10,6 +10,13 @@ validate_code = validators.RegexValidator(
     "Enter a valid code consisting of letters, numbers, underscores or hyphens.",
 )
 
+# A `note` is about the object itself, e.g. its location, rating or purpose.
+# An `annotation` is about the information recorded on the object, e.g. where
+# it comes from, how certain it is or why the object is modeled this way.
+ANNOTATION_HELP_TEXT = (
+    "About the recorded information rather than the object itself, e.g. its sources."
+)
+
 
 class Site(models.Model):
     """
@@ -18,6 +25,8 @@ class Site(models.Model):
     """
 
     name = models.CharField()
+    note = models.TextField(blank=True)
+    annotation = models.TextField(blank=True, help_text=ANNOTATION_HELP_TEXT)
 
     def __str__(self):
         return self.name
@@ -28,6 +37,7 @@ class Building(models.Model):
     code = models.CharField(max_length=40, validators=[validate_code])
     name = models.CharField(blank=True)
     note = models.TextField(blank=True)
+    annotation = models.TextField(blank=True, help_text=ANNOTATION_HELP_TEXT)
 
     class Meta:
         constraints = [
@@ -49,6 +59,7 @@ class Room(models.Model):
     code = models.CharField(max_length=40, validators=[validate_code])
     name = models.CharField(blank=True)
     note = models.TextField(blank=True)
+    annotation = models.TextField(blank=True, help_text=ANNOTATION_HELP_TEXT)
     floor = models.CharField(blank=True)
 
     class Meta:
@@ -124,6 +135,7 @@ class Component(models.Model):
     code = models.CharField(max_length=40, validators=[validate_code])
     name = models.CharField(blank=True)
     note = models.TextField(blank=True)
+    annotation = models.TextField(blank=True, help_text=ANNOTATION_HELP_TEXT)
 
     manufacturer = models.CharField(blank=True)
     model = models.CharField(blank=True)
@@ -204,6 +216,7 @@ class Pathway(models.Model):
     kind = models.CharField(choices=PathwayKind)
     name = models.CharField()
     note = models.TextField(blank=True)
+    annotation = models.TextField(blank=True, help_text=ANNOTATION_HELP_TEXT)
 
     diameter = models.PositiveSmallIntegerField(
         null=True, blank=True, help_text="In millimeters."
@@ -254,6 +267,7 @@ class Cable(models.Model):
     kind = models.CharField(choices=CableKind)
     name = models.CharField(blank=True)
     note = models.TextField(blank=True)
+    annotation = models.TextField(blank=True, help_text=ANNOTATION_HELP_TEXT)
 
     pathways = models.ManyToManyField(Pathway, through='PathSegment', related_name='cables')
     cross_section = models.CharField(blank=True)
