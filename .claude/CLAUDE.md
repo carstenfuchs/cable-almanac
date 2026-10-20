@@ -27,6 +27,16 @@ step by step.
 - `uv run ruff check` must pass. New code is formatted the way `ruff format`
   would format it, but existing code isn't reformatted. Comments, docstrings
   and long strings, which `ruff format` doesn't wrap, are wrapped by hand.
+- Blank lines surround statements like `if`, `for` or `try` that span more
+  than two lines, and other groups of lines that form a unit, except at the
+  start or end of the enclosing block. A statement that prepares such a block,
+  e.g. the assignment of the variable that an `if` tests, stays directly above
+  it. `ruff format` keeps these blank lines, but doesn't add them.
+- Definitions come before their use, as in C or C++: helpers above the
+  functions and classes that call them, the entry point, e.g. the `Command` of
+  a management command, at the bottom. The same holds for the methods of a
+  class, except that `__init__` or `setUp` comes first and models follow the
+  order of Django's coding style.
 - Keep dependencies minimal; ask before adding new ones.
 - Tests use Django's test framework (`uv run manage.py test`), one module
   per subject in the app's `tests/` package, named after category and subject,
