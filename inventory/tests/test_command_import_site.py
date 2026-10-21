@@ -121,13 +121,38 @@ class Test_import_site(TestCase):
         self.assertEqual(cable.annotation, 'Measured on site.')
         self.assertEqual(list(cable.pathways.all()), [pathway])
 
+    def test_site(self):
+        """The name in `site.yaml` takes precedence over that of the directory."""
+        self.write(
+            'site.yaml',
+            """
+            name: Beispiel
+            note: Family home
+            annotation: |
+              ## Sources
+
+              Wiring diagram of 2019.
+            """,
+        )
+
+        self.assertIn("Imported the site 'Beispiel'", self.import_site())
+
+        site = Site.objects.get()
+        self.assertEqual(site.note, 'Family home')
+        self.assertEqual(site.annotation, '## Sources\n\nWiring diagram of 2019.\n')
+
     def test_compare_unchanged(self):
         self.import_site()
         self.assertIn("The site 'example' matches the YAML files.", self.import_site())
 
     def test_compare_changed(self):
-        """A second import only reports the differences."""
+        """
+        A second import only reports the differences. It finds the existing site
+        regardless of the case of its name.
+        """
         self.import_site()
+
+        self.write('site.yaml', "name: Example\nnote: Family home")
 
         self.write(
             'buildings.yaml',
@@ -159,13 +184,15 @@ class Test_import_site(TestCase):
         self.assertEqual(
             lines[1:-1],
             [
+                "~ site: name: 'example' → 'Example'",
+                "~ site: note: '' → 'Family home'",
                 "~ building H1: note: '' → 'Built in 1965'",
                 "+ room H1.Dachboden",
                 "- cat6 cable H1.Keller.HV.Switch [Port-1] → H1.Flur.Dose1",
             ],
         )
 
-        self.assertEqual(Site.objects.count(), 1)
+        self.assertEqual(Site.objects.get().name, 'example')
         self.assertEqual(Building.objects.get().note, '')
         self.assertFalse(Room.objects.filter(code='Dachboden').exists())
         self.assertTrue(Cable.objects.exists())
@@ -192,6 +219,14 @@ class Test_import_site(TestCase):
         )
 
         self.assertImportError("buildings.yaml:1 (id=H1): unknown keys: colour")
+
+    def test_unknown_file(self):
+        self.write('sites.yaml', "name: Example")
+        self.assertImportError("Unknown files: sites.yaml")
+
+    def test_site_error(self):
+        self.write('site.yaml', "id: example")
+        self.assertImportError("site.yaml: unknown keys: id")
 
     def test_type(self):
         """YAML turns an unquoted `no` into a boolean, which must not pass as a string."""

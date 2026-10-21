@@ -1,12 +1,14 @@
 """
 Imports a site from the YAML files of the prototype `smart-home-kabeldoku`.
 
-A site is a directory with up to seven YAML files, one per kind of entity, each
-a list of entries. The prototype documents the format in `docs/modell.md`.
-Its values are German, so the import maps them to the choices of our models.
+A site is a directory with up to eight YAML files: `site.yaml` with a single
+mapping for the site itself and one file per kind of entity, each a list of
+entries. The prototype documents the format in `docs/modell.md`. Its values
+are German, so the import maps them to the choices of our models.
 
-If no site of the same name exists, the import creates it. Otherwise, it only
-reports how the YAML files differ from the existing site.
+The name of the site comes from `site.yaml`, else from the directory. If no
+site of that name exists, the import creates it. Otherwise, it only reports how
+the YAML files differ from the existing site.
 """
 
 import datetime
@@ -103,36 +105,46 @@ TYPE_NAMES = {
 }
 
 # The order of the kinds of objects in comparisons.
-KINDS_ORDER = ['building', 'room', 'component', 'pathway', 'cable']
+KINDS_ORDER = ['site', 'building', 'room', 'component', 'pathway', 'cable']
 
 
 class EntryError(Exception):
     """An error in an entry of a YAML file."""
 
 
-def load_yaml(path):
+def load_document(path):
     """
-    Returns the entries of a YAML file as (line, entry) pairs, or an empty list
-    if the file doesn't exist.
+    Returns the root node of a YAML file and the data constructed from it, or
+    `None` for both if the file doesn't exist or contains no data.
 
-    The line is the first line of the entry, as editors expect it in
-    `file:line`. To get it, the loader is driven by hand, as `yaml.safe_load()`
-    discards the positions of the nodes.
+    The loader is driven by hand, as `yaml.safe_load()` discards the nodes and
+    with them their positions in the file.
     """
     if not path.exists():
-        return []
+        return None, None
 
     with path.open(encoding='utf-8') as file:
         loader = yaml.SafeLoader(file)
         try:
             node = loader.get_single_node()
-            if node is None:
-                return []
-            data = loader.construct_document(node)
+            data = loader.construct_document(node) if node is not None else None
         except yaml.YAMLError as error:
             raise CommandError(f"{path.name}: {error}") from error
         finally:
             loader.dispose()
+
+    return node, data
+
+
+def load_yaml(path):
+    """
+    Returns the entries of a YAML file as (line, entry) pairs, or an empty list
+    if the file doesn't exist. The line is the first line of the entry, as
+    editors expect it in `file:line`.
+    """
+    node, data = load_document(path)
+    if node is None:
+        return []
 
     if not isinstance(data, list):
         raise CommandError(f"{path.name}: expected a list of entries")
@@ -183,6 +195,21 @@ def check_fields(entry, required, optional, prefix=''):
     return values
 
 
+def load_site(directory):
+    """
+    Returns the values in `site.yaml`, which contains a single mapping for the
+    site itself, with empty strings for missing values.
+    """
+    data = load_document(directory / 'site.yaml')[1]
+
+    try:
+        return check_fields(
+            {} if data is None else data, {}, {'name': str, 'note': str, 'annotation': str}
+        )
+    except EntryError as error:
+        raise CommandError(f"site.yaml: {error}") from error
+
+
 def choice(choices, value, key):
     """Returns the choice for the German `value` of `key`."""
     if value not in choices:
@@ -218,6 +245,8 @@ def cable_key(cable):
 
 def describe(key):
     """Describes the object with `key` for the comparison."""
+    if key[0] == 'site':
+        return "site"
     if key[0] != 'cable':
         return f"{key[0]} {key[1]}"
 
@@ -244,6 +273,8 @@ def site_records(site):
             for field in obj._meta.concrete_fields
             if not field.is_relation and not field.primary_key
         } | values
+
+    add(('site',), site)
 
     for building in Building.objects.filter(site=site):
         add(('building', building.qualified_id), building)
@@ -533,11 +564,14 @@ class Importer:
 
     def run(self):
         """
-        Imports all files. Raises a `CommandError` with all errors of the first
-        file that has any, as the entries of later files refer to its entries
-        and would mostly repeat its errors.
+        Imports all files of the entities. Raises a `CommandError` with all
+        errors of the first file that has any, as the entries of later files
+        refer to its entries and would mostly repeat its errors.
+
+        Unknown YAML files are refused, as their data would be lost silently
+        otherwise.
         """
-        for filename, import_entry in [
+        files = [
             ('buildings.yaml', self.import_building),
             ('rooms.yaml', self.import_room),
             ('distributors.yaml', self.import_distributor),
@@ -545,7 +579,17 @@ class Importer:
             ('devices.yaml', self.import_device),
             ('conduits.yaml', self.import_pathway),
             ('cables.yaml', self.import_cable),
-        ]:
+        ]
+
+        # `Command.handle()` has read `site.yaml` already, to create the site.
+        known = {'site.yaml'} | {filename for filename, _ in files}
+        unknown = sorted(
+            path.name for path in self.directory.glob('*.yaml') if path.name not in known
+        )
+        if unknown:
+            raise CommandError(f"Unknown files: {', '.join(unknown)}")
+
+        for filename, import_entry in files:
             errors = []
             for line, entry in load_yaml(self.directory / filename):
                 self.place = f'{filename}:{line}'
@@ -569,14 +613,17 @@ class Command(BaseCommand):
         )
 
         parser.add_argument(
-            '--name', help="The name of the site. Defaults to the name of the directory."
+            '--name',
+            help="The name of the site. Defaults to the name in site.yaml, else to the "
+            "name of the directory.",
         )
 
     def handle(self, directory, name, **options):
         if not directory.is_dir():
             raise CommandError(f"Directory not found: {directory}")
 
-        name = name or directory.resolve().name
+        values = load_site(directory)
+        name = name or values['name'] or directory.resolve().name
         existing = list(Site.objects.filter(name__iexact=name))
         if len(existing) > 1:
             raise CommandError(f"There are several sites named {name!r}.")
@@ -586,7 +633,9 @@ class Command(BaseCommand):
             # of the same name, which is rolled back after the comparison.
             # This way, the comparison sees the data exactly as an import would
             # store it, after all checks.
-            site = Site.objects.create(name=name)  # Names are not unique.
+            site = Site.objects.create(  # Names are not unique.
+                name=name, note=values['note'], annotation=values['annotation']
+            )
             importer = Importer(directory, site)
             importer.run()
 
